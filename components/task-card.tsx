@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { type TodoItem, Status } from "@/lib/types"
 import { Calendar, ExternalLink, FileText, Pencil, Trash2 } from "lucide-react"
 import { format } from "date-fns"
-import NextImage from "next/image"
 
 interface TaskCardProps {
   task: TodoItem
