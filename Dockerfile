@@ -28,5 +28,11 @@ RUN sed -i 's|#ServerName www.example.com:80|ServerName iceage.local|' /usr/loca
 # Copy exported static site
 COPY --from=builder /app/out/ /usr/local/apache2/htdocs/
 COPY --from=builder /app/public/.htaccess /usr/local/apache2/htdocs/.htaccess
+# Provide default config loaded at runtime
+COPY --from=builder /app/public/default-config.js /usr/local/apache2/htdocs/default-config.js
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 8080
+
+ENTRYPOINT ["entrypoint.sh"]
