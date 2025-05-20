@@ -1,8 +1,47 @@
 import { config } from "./config"
-import { type TodoItem, Status, type TaskSearchDTO, type PageResponse, type FilterState } from "./types"
-import { format } from "date-fns"
+import {
+  type TodoItem,
+  Status,
+  type TaskSearchDTO,
+  type PageResponse,
+  type FilterState,
+  type User,
+  type Tag,
+} from "./types"
 
 // Mock data
+const mockUsers: User[] = [
+  {
+    id: "123456789",
+    name: "Demo User",
+    email: "demo@example.com",
+    picture: "https://ui-avatars.com/api/?name=Demo+User&background=random",
+  },
+  {
+    id: "987654321",
+    name: "Jane Smith",
+    email: "jane@example.com",
+    picture: "https://ui-avatars.com/api/?name=Jane+Smith&background=random",
+  },
+  {
+    id: "456789123",
+    name: "John Doe",
+    email: "john@example.com",
+    picture: "https://ui-avatars.com/api/?name=John+Doe&background=random",
+  },
+]
+
+const mockTags: Tag[] = [
+  { id: "dev", name: "Development", color: "#3b82f6" },
+  { id: "design", name: "Design", color: "#ec4899" },
+  { id: "business", name: "Business", color: "#f59e0b" },
+  { id: "system", name: "System", color: "#10b981" },
+  { id: "devops", name: "DevOps", color: "#8b5cf6" },
+]
+
+const mockStatuses: Status[] = Object.values(Status);
+
+
 const mockTasks: TodoItem[] = [
   {
     id: 1,
@@ -12,6 +51,8 @@ const mockTasks: TodoItem[] = [
     status: Status.BACKLOG,
     ticketImageUrl: "",
     attachedDocumentUrl: "",
+    assignee: mockUsers[0],
+    tags: [mockTags[0], mockTags[1]],
   },
   {
     id: 2,
@@ -21,6 +62,8 @@ const mockTasks: TodoItem[] = [
     status: Status.READY,
     ticketImageUrl: "",
     attachedDocumentUrl: "",
+    assignee: mockUsers[1],
+    tags: [mockTags[1]],
   },
   {
     id: 3,
@@ -30,6 +73,8 @@ const mockTasks: TodoItem[] = [
     status: Status.IN_PROGRESS,
     ticketImageUrl: "",
     attachedDocumentUrl: "",
+    assignee: mockUsers[2],
+    tags: [mockTags[0]],
   },
   {
     id: 4,
@@ -39,6 +84,8 @@ const mockTasks: TodoItem[] = [
     status: Status.REVIEW,
     ticketImageUrl: "",
     attachedDocumentUrl: "",
+    assignee: mockUsers[0],
+    tags: [mockTags[0], mockTags[4]],
   },
   {
     id: 5,
@@ -48,6 +95,8 @@ const mockTasks: TodoItem[] = [
     status: Status.DONE,
     ticketImageUrl: "",
     attachedDocumentUrl: "",
+    assignee: mockUsers[1],
+    tags: [mockTags[2], mockTags[4]],
   },
   // Add more mock tasks to test pagination
   ...Array.from({ length: 20 }, (_, i) => ({
@@ -58,13 +107,15 @@ const mockTasks: TodoItem[] = [
     status: Object.values(Status)[Math.floor(Math.random() * 5)],
     ticketImageUrl: "",
     attachedDocumentUrl: "",
+    assignee: mockUsers[Math.floor(Math.random() * mockUsers.length)],
+    tags: [mockTags[Math.floor(Math.random() * mockTags.length)]],
   })),
 ]
 
 // Helper function to format date for API
 const formatDateForApi = (date: Date | null): string | undefined => {
   if (!date) return undefined
-  return format(date, "yyyy-MM-dd'T'HH:mm:ss")
+  return date.toISOString() // Use ISO format for API consistency
 }
 
 // Helper function to build query string for pagination
@@ -81,6 +132,24 @@ const buildPaginationQuery = (page: number, size: number, sortField?: string, so
 }
 
 // Mock API functions
+const mockGetUsers = async (): Promise<User[]> => {
+  console.log("MOCK API Call: Fetching users")
+  await new Promise((resolve) => setTimeout(resolve, 300))
+  return mockUsers
+}
+
+const mockGetTags = async (): Promise<Tag[]> => {
+  console.log("MOCK API Call: Fetching tags")
+  await new Promise((resolve) => setTimeout(resolve, 300))
+  return mockTags
+}
+
+const mockGetStatuses = async (): Promise<Status[]> => {
+  console.log("MOCK API Call: Fetching statuses")
+  await new Promise((resolve) => setTimeout(resolve, 300))
+  return mockStatuses
+}
+
 const mockFetchTasks = async (
   activeTab: string,
   statusFilter: Status | "ALL",
@@ -152,6 +221,16 @@ const mockFetchTasks = async (
         return new Date(task.dueDate) <= toDate
       })
     }
+
+    // Apply assignee filter
+    if (filters.assigneeId) {
+      filteredTasks = filteredTasks.filter((task) => task.assignee?.id === filters.assigneeId)
+    }
+
+    // Apply tag filters
+    if (filters.tagIds && filters.tagIds.length > 0) {
+      filteredTasks = filteredTasks.filter((task) => task.tags.some((tag) => filters.tagIds.includes(tag.id)))
+    }
   }
 
   // Apply sorting
@@ -170,6 +249,11 @@ const mockFetchTasks = async (
         return isAsc ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title)
       } else if (sortField === "status") {
         return isAsc ? a.status.localeCompare(b.status) : b.status.localeCompare(a.status)
+      } else if (sortField === "assignee") {
+        // Handle assignee sorting
+        const aName = a.assignee?.name || ""
+        const bName = b.assignee?.name || ""
+        return isAsc ? aName.localeCompare(bName) : bName.localeCompare(aName)
       }
       return 0
     })
@@ -263,6 +347,48 @@ const mockGetTaskById = async (taskId: number): Promise<TodoItem> => {
 }
 
 // Real API functions
+const realGetUsers = async (): Promise<User[]> => {
+  console.log("REAL API Call: Fetching users")
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/users`)
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`)
+    }
+    return await response.json()
+  } catch (error) {
+    console.error("Error fetching users:", error)
+    throw error
+  }
+}
+
+const realGetTags = async (): Promise<Tag[]> => {
+  console.log("REAL API Call: Fetching tags")
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/tags`)
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`)
+    }
+    return await response.json()
+  } catch (error) {
+    console.error("Error fetching tags:", error)
+    throw error
+  }
+}
+
+const realGetStatuses = async (): Promise<Status[]> => {
+  console.log("REAL API Call: Fetching tags")
+  try {
+    const response = await fetch(`${config.apiBaseUrl}/todos/statuses`)
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`)
+    }
+    return await response.json()
+  } catch (error) {
+    console.error("Error fetching statuses:", error)
+    throw error
+  }
+}
+
 const realFetchTasks = async (
   activeTab: string,
   statusFilter: Status | "ALL",
@@ -317,36 +443,51 @@ const realFetchTasks = async (
     // Handle sidebar status filter
     if (statusFilter !== "ALL") {
       statuses.push(statusFilter)
-    } else {
-      // Handle checkbox status filters
+    } else if (activeTab === "board") {
+      // If we're on the board tab and no specific status is selected
+      // Check if any status checkboxes are selected
       const anyStatusSelected = Object.entries(filters.statusFilters).some(([_, isSelected]) => isSelected)
 
       if (anyStatusSelected) {
+        // Add only the selected statuses
         Object.entries(filters.statusFilters).forEach(([status, isSelected]) => {
           if (isSelected) {
             statuses.push(status as Status)
           }
         })
-      } else if (activeTab === "board") {
+      } else {
         // If no statuses selected and we're on the board tab, exclude BACKLOG
         statuses.push(...Object.values(Status).filter((status) => status !== Status.BACKLOG))
-      } else if (activeTab === "backlog") {
-        // If we're on the backlog tab, only show BACKLOG
-        statuses.push(Status.BACKLOG)
       }
+    } else if (activeTab === "backlog") {
+      // If we're on the backlog tab, only show BACKLOG
+      statuses.push(Status.BACKLOG)
     }
 
     if (statuses.length > 0) {
       searchDTO.statuses = statuses
     }
 
-    // Add date range filters
+    // Add date range filters - ensure proper ISO format for API
     if (filters.dueDateFrom) {
       searchDTO.fromDate = formatDateForApi(filters.dueDateFrom)
     }
 
     if (filters.dueDateTo) {
-      searchDTO.toDate = formatDateForApi(filters.dueDateTo)
+      // Set time to end of day for "to" date
+      const toDate = new Date(filters.dueDateTo)
+      toDate.setHours(23, 59, 59, 999)
+      searchDTO.toDate = formatDateForApi(toDate)
+    }
+
+    // Add assignee filter
+    if (filters.assigneeId) {
+      searchDTO.assigneeId = filters.assigneeId
+    }
+
+    // Add tag filters
+    if (filters.tagIds && filters.tagIds.length > 0) {
+      searchDTO.tagIds = filters.tagIds
     }
 
     body = searchDTO
@@ -542,4 +683,12 @@ export const apiService = {
   deleteTask: (taskId: number) => (config.useRealApi ? realDeleteTask(taskId) : mockDeleteTask(taskId)),
 
   getTaskById: (taskId: number) => (config.useRealApi ? realGetTaskById(taskId) : mockGetTaskById(taskId)),
+
+  // Add new functions
+  getUsers: () => (config.useRealApi ? realGetUsers() : mockGetUsers()),
+
+  getTags: () => (config.useRealApi ? realGetTags() : mockGetTags()),
+
+  getStatuses: () => (config.useRealApi ? realGetStatuses() : mockGetStatuses())
 }
+

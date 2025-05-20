@@ -1,21 +1,21 @@
-declare global {
-  interface Window {
-    __APP_CONFIG__?: {
-      apiBaseUrl?: string;
-    };
-  }
-}
-
-// Export default configuration using window-based config
+// Configuration for the application
 export const config = {
-  useRealApi: true,
+  // Set to true to use real API calls, false to use mock data
+  useRealApi: false,
 
-  // Read from runtime-injected config, fallback to localhost
-  apiBaseUrl: typeof window !== "undefined" && window.__APP_CONFIG__?.apiBaseUrl
-      ? window.__APP_CONFIG__.apiBaseUrl
-      : "http://localhost:8080/api",
+  // Set to true to use real WebSocket for notifications, false to use mock notifications
+  useRealWebSocket: false, // Set to true to use real WebSocket, false for mock
 
+  // WebSocket URL for notifications
+  websocketUrl: process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://localhost:8080",
+
+  // Base URL for the API
+  apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.example.com",
+
+  // Default page size for pagination
   defaultPageSize: 10,
+
+  // Default sort order
   defaultSortField: "dueDate",
   defaultSortDirection: "desc" as "asc" | "desc",
-};
+}
