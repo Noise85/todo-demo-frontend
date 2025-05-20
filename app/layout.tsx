@@ -4,6 +4,8 @@ import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ToastProvider, ToastViewport } from "@/components/ui/toast"
 import { AuthProvider } from "@/contexts/auth-context"
+import { ThemeContextProvider } from "@/contexts/theme-context"
+import { NotificationProvider } from "@/contexts/notification-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -19,24 +21,25 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <title>Task manager - Welcome</title>
         <script src="/default-config.js"></script>
       </head>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthProvider>
-            <ToastProvider>
-              <main className="min-h-screen bg-background">{children}</main>
-              <ToastViewport />
-            </ToastProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <ThemeContextProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <AuthProvider>
+              <NotificationProvider>
+                <ToastProvider>
+                  <main className="min-h-screen bg-background">{children}</main>
+                  <ToastViewport />
+                </ToastProvider>
+              </NotificationProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </ThemeContextProvider>
       </body>
     </html>
   )
 }
-
-
-import './globals.css'
